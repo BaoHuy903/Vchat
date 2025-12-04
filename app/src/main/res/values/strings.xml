@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vchat</string>
+    <string name="welcome_back">Welcome Back</string>
+    <string name="login_an_account">Login an account</string>
+    <string name="email_hint">email@gmail.com</string>
+    <string name="password_hint">123456</string>
+    <string name="continue_button">Continue</string>
+    <string name="terms_and_policy">By clicking continue, you agree to our Terms of Service and Privacy Policy</string>
+    <string name="post_title">Post</string>
+    <string name="new_post_title">New</string>
+    <string name="user_name">Gon</string>
+    <string name="user_email">s.ferguson@gmail.com</string>
+    <string name="write_something">Write something...</string>
+    <string name="add_task">Add task</string>
+    <string name="home_title">Trang Chủ</string>
+    <string name="search_hint">Search</string>
+    <string name="post_description">Post description</string>
+    <string name="likes">21 likes</string>
+    <string name="comments">4 comments</string>
+    <string name="body_text">Body text for a post. Since it\'s a social app, sometimes it\'s a hot take, and sometimes it\'s a question.</string>
+    <string name="likes_2">6 likes</string>
+    <string name="comments_2">18 comments</string>
+    <string name="helena_user">Helena</string>
+    <string name="daniel_user">Daniel</string>
+    <string name="in_group_name">in Group name</string>
+    <string name="time_1">3 min ago</string>
+    <string name="time_2">2 hrs ago</string>
+
+    <!-- Strings added to fix the build error -->
+    <string name="desc_video_call">Video Call</string>
+    <string name="desc_voice_call">Voice Call</string>
+    <string name="desc_add_media">Add Media</string>
+    <string name="desc_voice_message">Voice Message</string>
+    <string name="hint_message">Type a message...</string>
+    <string name="desc_send_message">Send Message</string>
+    <string name="gallery">Gallery</string>
+    <string name="upload">Upload</string>
+    <string name="post">Post</string>
+
+</resources>
