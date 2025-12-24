@@ -3,7 +3,6 @@ package com.endterm.vchat;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -126,6 +125,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void seedInitialData() {
+        // --- Create Vchat Bot with Avatar ---
+        // Using RoboHash to generate a cool robot avatar
+        seedUser("vchat_bot_id", "Vchat Bot", "https://robohash.org/vchat_bot_id?set=set1", "Internet", "Bot", "AI Assistant", "101010");
+
         // --- User 1: Jane Doe (already exists check) ---
         seedUser("dummy_user_1", "Jane Doe", "https://i.pravatar.cc/150?u=janedoe", "Canada", "Female", "Designer", "555-0102");
 
@@ -146,6 +149,11 @@ public class MainActivity extends AppCompatActivity {
             if (!document.exists()) {
                 User user = new User(userId, username, imageUrl, country, genre, work, phone);
                 userRef.set(user).addOnSuccessListener(aVoid -> Log.d(TAG, "Seeded user: " + username));
+            } else {
+                 // Update existing bot avatar if needed (optional logic, but good for testing)
+                 if (userId.equals("vchat_bot_id")) {
+                     userRef.update("imageurl", imageUrl);
+                 }
             }
         });
     }
