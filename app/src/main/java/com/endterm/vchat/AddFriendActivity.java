@@ -33,15 +33,23 @@ public class AddFriendActivity extends AppCompatActivity {
         bottomNavigationView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.nav_home) {
-                startActivity(new Intent(AddFriendActivity.this, MainActivity.class));
-                finish();
+                startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                overridePendingTransition(0, 0);
                 return true;
             } else if (itemId == R.id.nav_search) {
                 // Already on this screen
                 return true;
+            } else if (itemId == R.id.nav_add) {
+                startActivity(new Intent(getApplicationContext(), PostActivity.class)); // Reverted
+                overridePendingTransition(0, 0);
+                return true;
+            } else if (itemId == R.id.nav_notifications) {
+                startActivity(new Intent(getApplicationContext(), NotificationActivity.class));
+                overridePendingTransition(0, 0);
+                return true;
             } else if (itemId == R.id.nav_chat) {
-                startActivity(new Intent(AddFriendActivity.this, ProfileActivity.class));
-                finish();
+                startActivity(new Intent(getApplicationContext(), ContactActivity.class));
+                overridePendingTransition(0, 0);
                 return true;
             }
             return false;

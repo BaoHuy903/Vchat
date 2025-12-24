@@ -7,10 +7,23 @@ import android.view.MenuItem;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ContactActivity extends AppCompatActivity {
+
+    private RecyclerView recyclerView;
+    private ContactAdapter contactAdapter;
+    private List<User> mUsers;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,42 +33,79 @@ public class ContactActivity extends AppCompatActivity {
         // --- Toolbar Setup ---
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        // Enable the back button
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportActionBar().setDisplayShowHomeEnabled(true);
-            getSupportActionBar().setDisplayShowTitleEnabled(false); // Hide the default title
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
         }
 
+        // --- RecyclerView Setup ---
+        recyclerView = findViewById(R.id.contacts_recycler_view);
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        mUsers = new ArrayList<>();
+        contactAdapter = new ContactAdapter(this, mUsers);
+        recyclerView.setAdapter(contactAdapter);
+
+        readUsers();
+
         // --- Bottom Navigation Setup ---
+        setupBottomNavigation();
+    }
+
+    private void readUsers() {
+        FirebaseUser firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        if (firebaseUser != null) {
+            db.collection("Users").get().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    mUsers.clear();
+                    for (QueryDocumentSnapshot document : task.getResult()) {
+                        User user = document.toObject(User.class);
+                        // Make sure the user object and its ID is not null
+                        if (user != null && user.getId() != null) {
+                             // Add all users except the current user
+                            if (!user.getId().equals(firebaseUser.getUid())) {
+                                mUsers.add(user);
+                            }
+                        }
+                    }
+                    contactAdapter.notifyDataSetChanged();
+                }
+            });
+        }
+    }
+
+    private void setupBottomNavigation() {
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
         bottomNavigationView.setSelectedItemId(R.id.nav_chat);
 
         bottomNavigationView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.nav_home) {
-                startActivity(new Intent(ContactActivity.this, MainActivity.class));
-                finish();
+                startActivity(new Intent(getApplicationContext(), MainActivity.class));
                 return true;
             } else if (itemId == R.id.nav_search) {
-                startActivity(new Intent(ContactActivity.this, AddFriendActivity.class));
-                finish();
+                startActivity(new Intent(getApplicationContext(), AddFriendActivity.class));
+                return true;
+            } else if (itemId == R.id.nav_add) {
+                startActivity(new Intent(getApplicationContext(), PostActivity.class));
+                return true;
+            } else if (itemId == R.id.nav_notifications) {
+                startActivity(new Intent(getApplicationContext(), NotificationActivity.class));
                 return true;
             } else if (itemId == R.id.nav_chat) {
-                // Already on this screen
-                return true;
+                return true; // Already here
             }
-            // Add other navigation items if needed
-
             return false;
         });
     }
 
-    // Handle the back button click
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            // Finish this activity and return to the previous one
             finish();
             return true;
         }

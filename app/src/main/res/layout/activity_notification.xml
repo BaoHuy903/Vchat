@@ -10,6 +10,7 @@
         android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
         android:background="@android:color/white">
 
         <androidx.appcompat.widget.Toolbar
@@ -30,12 +31,12 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/notifications_recycler_view"
+        android:id="@+id/recycler_view" 
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/appbar"
         android:layout_above="@+id/bottom_navigation"
-        tools:listitem="@layout/item_notification" />
+        android:layout_below="@+id/appbar"
+        tools:listitem="@layout/notification_item" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
