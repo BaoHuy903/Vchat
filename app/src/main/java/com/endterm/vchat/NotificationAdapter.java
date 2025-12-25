@@ -1,6 +1,7 @@
 package com.endterm.vchat;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,22 +33,30 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(mContext).inflate(R.layout.notification_item, parent, false);
-        return new NotificationAdapter.ViewHolder(view);
+        return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        final Notification notification = mNotification.get(position);
+        // [FIX] Thêm try-catch để ngăn chặn mọi lỗi crash tiềm ẩn trong item
+        try {
+            final Notification notification = mNotification.get(position);
 
-        holder.comment.setText(notification.getText());
+            holder.comment.setText(notification.getText());
 
-        getUserInfo(holder.image_profile, holder.username, notification.getUserid());
+            getUserInfo(holder.image_profile, holder.username, notification.getUserid());
 
-        if (notification.isIspost()) {
-            holder.post_image.setVisibility(View.VISIBLE);
-            getPostImage(holder.post_image, notification.getPostid());
-        } else {
-            holder.post_image.setVisibility(View.GONE);
+            if (notification.isIspost()) {
+                holder.post_image.setVisibility(View.VISIBLE);
+                holder.post_image.setImageResource(android.R.color.transparent);
+                getPostImage(holder.post_image, notification.getPostid());
+            } else {
+                holder.post_image.setVisibility(View.GONE);
+            }
+        } catch (Exception e) {
+            Log.e("NotificationAdapter", "Error binding view: " + e.getMessage());
+            // Ẩn view lỗi hoặc hiển thị view trống thay vì crash app
+            holder.itemView.setVisibility(View.GONE);
         }
     }
 
@@ -73,27 +82,43 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     }
 
     private void getUserInfo(final CircleImageView imageView, final TextView username, String publisherid) {
-        DocumentReference reference = FirebaseFirestore.getInstance().collection("Users").document(publisherid);
-        reference.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                User user = documentSnapshot.toObject(User.class);
-                if (user != null) {
-                    Glide.with(mContext).load(user.getImageurl()).into(imageView);
-                    username.setText(user.getUsername());
+        if (publisherid == null || publisherid.isEmpty()) return;
+        try {
+            DocumentReference reference = FirebaseFirestore.getInstance().collection("Users").document(publisherid);
+            reference.get().addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    User user = documentSnapshot.toObject(User.class);
+                    if (user != null && imageView != null && imageView.getContext() != null) {
+                        try {
+                            Glide.with(imageView.getContext())
+                                 .load(user.getImageurl())
+                                 .placeholder(R.drawable.ic_launcher_background)
+                                 .into(imageView);
+                            username.setText(user.getUsername());
+                        } catch (Exception e) { Log.e("Adapter", "Glide error"); }
+                    }
                 }
-            }
-        });
+            }).addOnFailureListener(e -> Log.e("Adapter", "Firestore error: " + e.getMessage()));
+        } catch (Exception e) { Log.e("Adapter", "Error getting user info"); }
     }
 
     private void getPostImage(final ImageView imageView, String postid) {
-        DocumentReference reference = FirebaseFirestore.getInstance().collection("posts").document(postid);
-        reference.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                Post post = documentSnapshot.toObject(Post.class);
-                if (post != null) {
-                    Glide.with(mContext).load(post.getImageUrl()).into(imageView);
+        if (postid == null || postid.isEmpty()) return;
+        try {
+            DocumentReference reference = FirebaseFirestore.getInstance().collection("posts").document(postid);
+            reference.get().addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    Post post = documentSnapshot.toObject(Post.class);
+                    if (post != null && imageView != null && imageView.getContext() != null) {
+                        try {
+                            Glide.with(imageView.getContext())
+                                .load(post.getImageUrl())
+                                .placeholder(android.R.color.darker_gray) // [FIX] Đổi thành màu có sẵn của hệ thống
+                                .into(imageView);
+                        } catch (Exception e) { Log.e("Adapter", "Glide error"); }
+                    }
                 }
-            }
-        });
+            });
+        } catch (Exception e) { Log.e("Adapter", "Error getting post image"); }
     }
 }

@@ -2,35 +2,52 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="16dp">
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:paddingStart="16dp"
+    android:paddingTop="12dp"
+    android:paddingEnd="16dp"
+    android:paddingBottom="12dp">
 
     <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/contact_profile_image"
         android:layout_width="56dp"
         android:layout_height="56dp"
+        android:layout_centerVertical="true"
         android:src="@drawable/ic_launcher_background" />
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
         android:layout_marginStart="16dp"
+        android:layout_marginEnd="8dp"
+        android:layout_toStartOf="@id/contact_timestamp"
         android:layout_toEndOf="@+id/contact_profile_image"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/contact_name"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:text="Name"
-            android:textColor="@android:color/black"
+            android:textColor="#000000"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/contact_last_message"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Supporting line text lorem ipsum.." />
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Tap to chat"
+            android:textColor="#757575"
+            android:textSize="14sp" />
     </LinearLayout>
 
     <TextView
@@ -39,6 +56,9 @@
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
         android:layout_centerVertical="true"
-        android:text="10 min" />
+        android:text="Just now"
+        android:textColor="#9E9E9E"
+        android:textSize="12sp"
+        android:visibility="visible" />
 
 </RelativeLayout>

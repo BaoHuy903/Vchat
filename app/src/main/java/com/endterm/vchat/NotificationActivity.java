@@ -2,6 +2,8 @@ package com.endterm.vchat;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -16,6 +18,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class NotificationActivity extends AppCompatActivity {
@@ -44,8 +47,11 @@ public class NotificationActivity extends AppCompatActivity {
         FirebaseUser firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
         if (firebaseUser != null) {
             FirebaseFirestore db = FirebaseFirestore.getInstance();
-            db.collection("Notifications").whereEqualTo("userid", firebaseUser.getUid())
-                    .orderBy("timestamp", Query.Direction.DESCENDING) // Assuming you will add a timestamp field
+            
+            // [FIX] Bỏ orderBy để tránh lỗi "Missing Index" của Firestore
+            // Chúng ta sẽ sắp xếp danh sách (sort) ngay trong Java sau khi tải về
+            db.collection("Notifications")
+                    .whereEqualTo("receiverId", firebaseUser.getUid())
                     .get()
                     .addOnCompleteListener(task -> {
                         if (task.isSuccessful()) {
@@ -54,9 +60,20 @@ public class NotificationActivity extends AppCompatActivity {
                                 Notification notification = document.toObject(Notification.class);
                                 notificationList.add(notification);
                             }
-                            // Reverse the list to show newest first, as orderBy is not available without an index
-                            // Collections.reverse(notificationList);
+                            
+                            // [FIX] Sắp xếp danh sách theo thời gian mới nhất -> cũ nhất tại đây
+                            Collections.sort(notificationList, (o1, o2) -> {
+                                if (o1.getTimestamp() == null || o2.getTimestamp() == null) return 0;
+                                return o2.getTimestamp().compareTo(o1.getTimestamp());
+                            });
+
                             notificationAdapter.notifyDataSetChanged();
+                            
+                            if (notificationList.isEmpty()) {
+                                // Toast.makeText(NotificationActivity.this, "Chưa có thông báo nào", Toast.LENGTH_SHORT).show();
+                            }
+                        } else {
+                            Log.e("NotifActivity", "Error getting documents: ", task.getException());
                         }
                     });
         }
