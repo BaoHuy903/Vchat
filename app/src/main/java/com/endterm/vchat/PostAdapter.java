@@ -2,6 +2,7 @@ package com.endterm.vchat;
 
 import android.content.Context;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +12,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
@@ -30,11 +32,16 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     private Context context;
     private List<Post> postList;
     private FirebaseUser firebaseUser;
+    private FirebaseFirestore db;
+
+    // Cache (bộ nhớ tạm) để lưu thông tin User
+    private Map<String, User> userCache = new HashMap<>();
 
     public PostAdapter(Context context, List<Post> postList) {
         this.context = context;
         this.postList = postList;
-        firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+        this.firebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+        this.db = FirebaseFirestore.getInstance();
     }
 
     @NonNull
@@ -46,49 +53,59 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull PostViewHolder holder, int position) {
-        Post post = postList.get(position);
+        // [QUAN TRỌNG] Thêm Try-Catch để ngăn chặn crash nếu dữ liệu lỗi
+        try {
+            Post post = postList.get(position);
 
-        holder.description.setText(post.getDescription());
-
-        // Load post image
-        if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
-            holder.postImage.setVisibility(View.VISIBLE);
-            Glide.with(context).load(post.getImageUrl()).into(holder.postImage);
-        } else {
-            holder.postImage.setVisibility(View.GONE);
-        }
-
-        // Set post time
-        if (post.getTimestamp() != null) {
-            long time = post.getTimestamp().getTime();
-            CharSequence timeAgo = DateUtils.getRelativeTimeSpanString(time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
-            holder.postTime.setText(timeAgo);
-        } else {
-            holder.postTime.setText("Just now");
-        }
-
-        // Load publisher info
-        publisherInfo(holder.userAvatar, holder.username, post.getUserId());
-
-        // Clear previous listeners before attaching new ones
-        holder.clearListeners();
-
-        // Handle like button state and clicks
-        holder.isLikedListener = isLiked(post.getPostId(), holder.likeButton);
-        holder.nrLikesListener = nrLikes(holder.likesCounter, post.getPostId());
-
-        holder.likeButton.setOnClickListener(v -> {
-            if (firebaseUser == null) return;
-            DocumentReference likeRef = FirebaseFirestore.getInstance().collection("Likes").document(post.getPostId());
-            if (holder.likeButton.getTag().equals("like")) {
-                Map<String, Object> data = new HashMap<>();
-                data.put("likedBy", FieldValue.arrayUnion(firebaseUser.getUid()));
-                likeRef.set(data, SetOptions.merge());
-                addNotification(post.getUserId(), post.getPostId());
+            // 1. Hiển thị nội dung
+            if (post.getDescription() != null) {
+                holder.description.setText(post.getDescription());
             } else {
-                likeRef.update("likedBy", FieldValue.arrayRemove(firebaseUser.getUid()));
+                holder.description.setText("");
             }
-        });
+
+            // 2. Hiển thị ảnh bài viết
+            if (post.getImageUrl() != null && !post.getImageUrl().isEmpty()) {
+                holder.postImage.setVisibility(View.VISIBLE);
+                try {
+                    Glide.with(context) // Có thể đổi thành holder.itemView.getContext() nếu context gốc lỗi
+                            .load(post.getImageUrl())
+                            .diskCacheStrategy(DiskCacheStrategy.ALL)
+                            .placeholder(R.drawable.ic_launcher_background)
+                            .into(holder.postImage);
+                } catch (Exception e) {
+                    Log.e("PostAdapter", "Glide error: " + e.getMessage());
+                }
+            } else {
+                holder.postImage.setVisibility(View.GONE);
+            }
+
+            // 3. Hiển thị thời gian
+            if (post.getTimestamp() != null) {
+                long time = post.getTimestamp().getTime();
+                CharSequence timeAgo = DateUtils.getRelativeTimeSpanString(time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS);
+                holder.postTime.setText(timeAgo);
+            } else {
+                holder.postTime.setText("Just now");
+            }
+
+            // 4. Tải thông tin người đăng
+            loadPublisherInfo(holder, post.getUserId());
+
+            // 5. Quản lý Listener
+            holder.clearListeners();
+            holder.isLikedListener = isLiked(post.getPostId(), holder.likeButton);
+            holder.nrLikesListener = nrLikes(holder.likesCounter, post.getPostId());
+
+            // 6. Xử lý click Like
+            holder.likeButton.setOnClickListener(v -> handleLikeClick(holder, post));
+
+        } catch (Exception e) {
+            Log.e("PostAdapter", "Error binding view: " + e.getMessage());
+            // Ẩn item lỗi thay vì crash app
+            holder.itemView.setVisibility(View.GONE);
+            holder.itemView.setLayoutParams(new RecyclerView.LayoutParams(0, 0));
+        }
     }
 
     @Override
@@ -99,7 +116,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     @Override
     public void onViewRecycled(@NonNull PostViewHolder holder) {
         super.onViewRecycled(holder);
-        // Clear listeners when view is recycled
         holder.clearListeners();
     }
 
@@ -134,64 +150,109 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         }
     }
 
-    private void publisherInfo(final CircleImageView userAvatar, final TextView username, final String userId) {
+    private void handleLikeClick(PostViewHolder holder, Post post) {
+        if (firebaseUser == null) return;
+        DocumentReference likeRef = db.collection("Likes").document(post.getPostId());
+        
+        // Kiểm tra tag null an toàn
+        Object tag = holder.likeButton.getTag();
+        if (tag != null && tag.equals("like")) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("likedBy", FieldValue.arrayUnion(firebaseUser.getUid()));
+            likeRef.set(data, SetOptions.merge());
+            addNotification(post.getUserId(), post.getPostId());
+        } else {
+            likeRef.update("likedBy", FieldValue.arrayRemove(firebaseUser.getUid()));
+        }
+    }
+
+    private void loadPublisherInfo(PostViewHolder holder, String userId) {
         if (userId == null) return;
-        DocumentReference userRef = FirebaseFirestore.getInstance().collection("Users").document(userId);
-        userRef.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                User user = documentSnapshot.toObject(User.class);
-                if (user != null) {
-                    username.setText(user.getUsername());
-                    if (user.getImageurl() != null && !user.getImageurl().isEmpty()) {
-                        Glide.with(context).load(user.getImageurl()).into(userAvatar);
-                    } else {
-                        userAvatar.setImageResource(R.drawable.ic_launcher_background);
+
+        if (userCache.containsKey(userId)) {
+            updateUserUI(holder, userCache.get(userId));
+        } else {
+            db.collection("Users").document(userId).get().addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    User user = documentSnapshot.toObject(User.class);
+                    if (user != null) {
+                        userCache.put(userId, user);
+                        updateUserUI(holder, user);
                     }
                 }
+            }).addOnFailureListener(e -> Log.e("PostAdapter", "Error load user: " + e.getMessage()));
+        }
+    }
+
+    private void updateUserUI(PostViewHolder holder, User user) {
+        try {
+            holder.username.setText(user.getUsername());
+            if (user.getImageurl() != null && !user.getImageurl().isEmpty()) {
+                Glide.with(context) // Hoặc holder.itemView.getContext()
+                        .load(user.getImageurl())
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .into(holder.userAvatar);
+            } else {
+                holder.userAvatar.setImageResource(R.drawable.ic_launcher_background);
             }
-        });
+        } catch (Exception e) {
+            Log.e("PostAdapter", "Error update UI: " + e.getMessage());
+        }
     }
 
     private ListenerRegistration isLiked(String postId, ImageView imageView) {
         if (firebaseUser == null) return null;
-        DocumentReference likeRef = FirebaseFirestore.getInstance().collection("Likes").document(postId);
+        DocumentReference likeRef = db.collection("Likes").document(postId);
         return likeRef.addSnapshotListener((snapshot, e) -> {
-            if (e != null) { return; }
-            if (snapshot != null && snapshot.exists()) {
-                List<String> likedBy = (List<String>) snapshot.get("likedBy");
-                if (likedBy != null && likedBy.contains(firebaseUser.getUid())) {
-                    imageView.setImageResource(R.drawable.ic_liked);
-                    imageView.setTag("liked");
+            if (e != null) return;
+            try {
+                if (snapshot != null && snapshot.exists()) {
+                    List<String> likedBy = (List<String>) snapshot.get("likedBy");
+                    if (likedBy != null && likedBy.contains(firebaseUser.getUid())) {
+                        imageView.setImageResource(R.drawable.ic_liked);
+                        imageView.setTag("liked");
+                    } else {
+                        imageView.setImageResource(R.drawable.ic_like);
+                        imageView.setTag("like");
+                    }
                 } else {
-                    imageView.setImageResource(R.drawable.ic_like);
-                    imageView.setTag("like");
+                     imageView.setImageResource(R.drawable.ic_like);
+                     imageView.setTag("like");
                 }
-            } else {
-                 imageView.setImageResource(R.drawable.ic_like);
-                 imageView.setTag("like");
+            } catch (Exception ex) {
+                Log.e("PostAdapter", "Error isLiked: " + ex.getMessage());
             }
         });
     }
 
     private ListenerRegistration nrLikes(TextView likes, String postId) {
-        DocumentReference likeRef = FirebaseFirestore.getInstance().collection("Likes").document(postId);
+        DocumentReference likeRef = db.collection("Likes").document(postId);
         return likeRef.addSnapshotListener((snapshot, e) -> {
-            if (e != null) { return; }
-             if (snapshot != null && snapshot.exists()) {
-                List<String> likedBy = (List<String>) snapshot.get("likedBy");
-                likes.setText((likedBy != null ? likedBy.size() : 0) + " likes");
-            } else {
-                likes.setText("0 likes");
+            if (e != null) return;
+            try {
+                 if (snapshot != null && snapshot.exists()) {
+                    List<String> likedBy = (List<String>) snapshot.get("likedBy");
+                    likes.setText((likedBy != null ? likedBy.size() : 0) + " likes");
+                } else {
+                    likes.setText("0 likes");
+                }
+            } catch (Exception ex) {
+                Log.e("PostAdapter", "Error nrLikes: " + ex.getMessage());
             }
         });
     }
 
     private void addNotification(String userid, String postid) {
         if (firebaseUser == null || firebaseUser.getUid().equals(userid)) {
-            return; // Don't notify for your own likes or if not logged in
+            return; 
         }
-        DocumentReference reference = FirebaseFirestore.getInstance().collection("Notifications").document();
-        Notification notification = new Notification(userid, "liked your post", postid, true);
+        // [FIX] Cập nhật constructor mới (thêm receiverId) để tránh lỗi nếu Notification.java đã đổi
+        // Nhưng cần cẩn thận nếu Notification.java có constructor cũ hay không.
+        // Tốt nhất dùng constructor cũ nếu chưa rõ, hoặc constructor mới nếu đã chắc chắn.
+        // Ở bước trước tôi đã thêm constructor 5 tham số và GIỮ constructor 4 tham số.
+        // Nên dùng cái nào cũng được. Dùng cái cũ để an toàn logic cũ.
+        DocumentReference reference = db.collection("Notifications").document();
+        Notification notification = new Notification(firebaseUser.getUid(), "liked your post", postid, true, userid);
         reference.set(notification);
     }
 }

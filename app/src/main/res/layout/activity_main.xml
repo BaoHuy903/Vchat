@@ -4,46 +4,32 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#F2F2F2"
     android:fitsSystemWindows="true"
     tools:context=".MainActivity">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_posts"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_above="@id/bottom_navigation"
-        android:layout_below="@+id/appbar" />
-
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/bottom_navigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        app:labelVisibilityMode="unlabeled"
-        app:menu="@menu/bottom_nav_menu" />
-
+    <!-- AppBar (Top Bar) -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_marginTop="31dp"
-        android:layout_marginEnd="0dp"
         android:background="@android:color/white"
-        android:elevation="0dp">
+        android:elevation="4dp"
+        app:elevation="4dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/white"
             app:contentInsetStart="0dp">
 
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp">
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
 
                 <de.hdodenhof.circleimageview.CircleImageView
                     android:id="@+id/iv_profile_toolbar"
@@ -51,25 +37,82 @@
                     android:layout_height="40dp"
                     android:layout_alignParentStart="true"
                     android:layout_centerVertical="true"
-                    android:src="@drawable/ic_launcher_background" />
+                    android:src="@drawable/ic_launcher_background"
+                    app:civ_border_color="#E0E0E0"
+                    app:civ_border_width="1dp" />
 
                 <EditText
                     android:id="@+id/et_search_toolbar"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="36dp"
                     android:layout_centerVertical="true"
-                    android:layout_marginStart="16dp"
+                    android:layout_marginStart="12dp"
                     android:layout_toEndOf="@id/iv_profile_toolbar"
                     android:background="@drawable/edit_text_background"
                     android:drawableStart="@drawable/ic_search"
                     android:drawablePadding="8dp"
-                    android:hint="Search..."
-                    android:padding="8dp" />
+                    android:hint="Tìm kiếm..."
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:textSize="14sp" />
 
             </RelativeLayout>
 
         </androidx.appcompat.widget.Toolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Main Content (Feed) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_posts"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottom_navigation"
+        android:layout_below="@+id/appbar"
+        android:clipToPadding="false"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:scrollbars="vertical" />
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@android:color/white"
+        android:elevation="16dp"
+        app:elevation="16dp"
+        app:labelVisibilityMode="unlabeled"
+        app:menu="@menu/bottom_nav_menu" />
+
+    <!-- Loading Layout (Preserved) -->
+    <RelativeLayout
+        android:id="@+id/loading_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CCFFFFFF"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="visible">
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:indeterminateTint="#0084FF" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/progress_bar"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="16dp"
+            android:text="Vchat"
+            android:textColor="#0084FF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
 
 </RelativeLayout>

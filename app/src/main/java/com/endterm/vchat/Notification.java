@@ -4,14 +4,25 @@ import com.google.firebase.firestore.ServerTimestamp;
 import java.util.Date;
 
 public class Notification {
-    private String userid;
+    private String userid; // Sender ID (người gửi)
     private String text;
     private String postid;
     private boolean ispost;
+    private String receiverId; // [NEW] Người nhận thông báo
     
     @ServerTimestamp
     private Date timestamp;
 
+    // Constructor đầy đủ
+    public Notification(String userid, String text, String postid, boolean ispost, String receiverId) {
+        this.userid = userid;
+        this.text = text;
+        this.postid = postid;
+        this.ispost = ispost;
+        this.receiverId = receiverId;
+    }
+    
+    // Constructor cũ (giữ lại để tránh lỗi code cũ nếu có)
     public Notification(String userid, String text, String postid, boolean ispost) {
         this.userid = userid;
         this.text = text;
@@ -52,6 +63,14 @@ public class Notification {
 
     public void setIspost(boolean ispost) {
         this.ispost = ispost;
+    }
+
+    public String getReceiverId() {
+        return receiverId;
+    }
+
+    public void setReceiverId(String receiverId) {
+        this.receiverId = receiverId;
     }
 
     public Date getTimestamp() {
